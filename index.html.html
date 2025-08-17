@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>点燃你的运动小宇宙 - 跳绳体能挑战</title>
+    <!-- 引入Tailwind CSS框架 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Chart.js用于绘制雷达图 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入Tone.js用于生成音效 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        /* 使用自定义字体，让页面更有设计感 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+        }
+        /* 定义页面切换的动画效果 */
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            opacity: 0;
+            transform: scale(1.05);
+            pointer-events: none; /* 默认页面不可交互 */
+        }
+        .page.active {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto; /*激活的页面可交互 */
+        }
+        /* 自定义按钮样式，增加动感 */
+        .btn-energize {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 5, 0.4);
+        }
+        .btn-energize:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 107, 5, 0.6);
+        }
+        .btn-energize:active {
+            transform: translateY(1px);
+        }
+        /* 敏捷挑战中圆点的样式 */
+        .dot {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+        .dot:active {
+            transform: scale(0.9);
+        }
+        /* 时机挑战中移动条的样式 */
+        #timing-bar {
+            position: absolute;
+            left: 0;
+            height: 100%;
+            background-color: #fb923c; /* 橙色 */
+            animation: move-bar 2s linear infinite alternate;
+        }
+        @keyframes move-bar {
+            from { left: 0; }
+            to { left: calc(100% - 20px); }
+        }
+        /* 营销弹窗样式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 999;
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: white; 
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            color: #334155; /* text-slate-700 */
+        }
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+        /* 新增：抽奖转盘样式 */
+        #lottery-wheel {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            border: 8px solid #f59e0b;
+            background: conic-gradient(
+                #f87171 0deg 60deg,
+                #60a5fa 60deg 120deg,
+                #34d399 120deg 180deg,
+                #f87171 180deg 240deg,
+                #60a5fa 240deg 300deg,
+                #a78bfa 300deg 360deg
+            );
+            transition: transform 5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .prize {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        }
+        .prize-text {
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            transform-origin: bottom center;
+            transform: translateX(-50%);
+            font-size: 14px;
+        }
+        #spin-btn {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: #f59e0b;
+            border-radius: 50%;
+            border: 4px solid white;
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        #spin-btn::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 0 15px 20px;
+            border-style: solid;
+            border-color: transparent transparent #f59e0b;
+        }
+    </style>
+</head>
+<body class="overflow-hidden bg-orange-50 text-slate-800">
+
+    <div id="app-container" class="relative w-full h-screen max-w-md mx-auto bg-orange-100">
+
+        <!-- Page 1: 启动页 -->
+        <div id="start-page" class="page active flex flex-col justify-center items-center text-center p-8 bg-gradient-to-br from-orange-300 to-amber-200">
+            <div class="flex-grow flex flex-col justify-center items-center">
+                <h1 class="text-5xl font-black tracking-wider text-orange-600 drop-shadow-lg" style="text-shadow: 1px 1px 2px rgba(255,255,255,0.5);">你的反应力，是王者还是青铜？</h1>
+                <p class="mt-4 text-xl text-slate-800 font-bold">15秒，AI算法测出你的隐藏运动潜力！</p>
+            </div>
+            <button id="start-challenge-btn" class="btn-energize w-full py-4 bg-orange-500 rounded-xl text-xl font-bold text-white">挑战王者级天赋！</button>
+            <!-- 品牌署名 -->
+            <div class="absolute bottom-4 text-xs text-slate-500">南宁市爱德华思跳绳 | AI智能运动算法生成</div>
+        </div>
+
+        <!-- Page 2: 身份选择页 -->
+        <div id="choice-page" class="page flex flex-col justify-center items-center p-8 bg-gradient-to-b from-orange-100 to-amber-200">
+            <h2 class="text-3xl font-bold mb-12 text-slate-700">请选择你的身份</h2>
+            <div class="w-full space-y-6">
+                <button data-type="child" class="user-choice-btn w-full py-8 bg-blue-500 rounded-xl text-2xl text-white font-bold transition hover:bg-blue-600 transform hover:scale-105">
+                    <span class="text-4xl">👨‍👩‍👧‍👦</span>
+                    <p>我是家长，为孩子测天赋</p>
+                </button>
+                <button data-type="adult" class="user-choice-btn w-full py-8 bg-purple-500 rounded-xl text-2xl text-white font-bold transition hover:bg-purple-600 transform hover:scale-105">
+                    <span class="text-4xl">🔥</span>
+                    <p>我为自己测潜能</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Page 3: 挑战页 -->
+        <div id="challenge-page" class="page flex flex-col justify-between p-4 bg-orange-100">
+            <!-- 挑战通用头部 -->
+            <div class="text-center p-2 bg-white/70 rounded-lg shadow">
+                <h3 id="challenge-title" class="text-xl font-bold"></h3>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div id="challenge-timer-bar" class="bg-green-500 h-2.5 rounded-full" style="width: 100%"></div>
+                </div>
+            </div>
+            
+            <!-- 挑战内容容器 -->
+            <div id="challenge-content" class="flex-grow relative mt-4 rounded-lg bg-white/70 shadow-inner">
+                <!-- 敏捷挑战 -->
+                <div id="agility-challenge" class="hidden w-full h-full"></div>
+                <!-- 耐力挑战 -->
+                <div id="endurance-challenge" class="hidden w-full h-full flex flex-col justify-center items-center">
+                    <p class="text-lg mb-4">10秒内，疯狂点击下方按钮！</p>
+                    <button id="endurance-btn" class="w-40 h-40 bg-red-500 rounded-full text-5xl font-black text-white transition transform active:scale-90 flex justify-center items-center shadow-lg shadow-red-500/50">点我!</button>
+                    <p id="endurance-count" class="mt-4 text-3xl font-bold">0</p>
+                </div>
+                <!-- 时机挑战 -->
+                <div id="timing-challenge" class="hidden w-full h-full flex flex-col justify-center items-center p-4">
+                    <p class="text-lg mb-8 text-center">当移动方块进入<span class="text-green-500 font-bold">绿色区域</span>时，立即点击！</p>
+                    <div class="w-full h-12 bg-gray-200 rounded-lg relative overflow-hidden">
+                        <div class="absolute h-full bg-green-500/30" style="left: 40%; width: 20%;"></div>
+                        <div id="timing-bar" class="w-5 h-full rounded"></div>
+                    </div>
+                    <button id="timing-btn" class="btn-energize w-full mt-12 py-4 bg-orange-500 rounded-xl text-xl text-white font-bold">就现在！</button>
+                    <p id="timing-feedback" class="mt-4 text-xl font-bold h-8"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 4: 加载页 -->
+        <div id="loading-page" class="page flex flex-col justify-center items-center bg-gradient-to-br from-orange-300 to-amber-200">
+            <div class="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-orange-500"></div>
+            <p id="loading-text" class="mt-4 text-lg text-slate-700">正在分析你的运动细胞...</p>
+        </div>
+
+        <!-- Page 5: 结果页 -->
+        <div id="result-page" class="page flex flex-col p-4 bg-gradient-to-br from-orange-100 to-amber-100 overflow-y-auto">
+            <div class="text-center">
+                <h2 class="text-3xl font-black text-orange-600">你的运动潜能报告</h2>
+                <!-- 品牌前置 -->
+                <h3 class="text-lg font-bold mt-2 text-slate-700">南宁市爱德华思跳绳</h3>
+            </div>
+            <div class="my-4 bg-white/60 p-4 rounded-xl text-center shadow">
+                <p class="text-lg">你的称号是</p>
+                <h3 id="result-title" class="text-4xl font-bold text-orange-500 my-2">--</h3>
+                <p id="result-description" class="text-slate-600">--</p>
+                 <!-- 炫耀海报引导 (MODIFIED) -->
+                <p class="text-sm font-bold text-red-500 animate-pulse mt-2">截图，快把荣誉分享出去吧！</p>
+            </div>
+            
+            <!-- 内容顺序调整 -->
+            <div class="my-4 bg-white/60 p-4 rounded-xl shadow">
+                <h4 class="text-xl font-bold text-center mb-2">能力雷达图</h4>
+                <canvas id="result-chart"></canvas>
+            </div>
+            <div class="my-4 bg-white/60 p-4 rounded-xl shadow">
+                <h4 class="text-xl font-bold text-center mb-2">专业建议</h4>
+                <p id="result-suggestion" class="text-slate-600 text-left">--</p>
+            </div>
+            
+            <div class="space-y-4 mt-auto pt-2">
+                 <p class="text-center text-red-500 font-bold mb-2 animate-pulse">本周仅剩 <span id="spots-left">7</span> 个免费体验名额！</p>
+                 <button id="open-lead-form-btn" class="w-full py-3 bg-green-500 rounded-xl text-lg text-white font-bold transition hover:bg-green-600">领取免费体验课</button>
+                 <button id="open-share-modal-btn" class="w-full py-3 bg-blue-500 rounded-xl text-lg text-white font-bold transition hover:bg-blue-600">分享挑战，赢取大奖</button>
+            </div>
+
+             <!-- 内容顺序调整 -->
+            <div class="my-4 bg-white/60 p-4 rounded-xl shadow">
+                <h4 class="text-xl font-bold text-center mb-2">挑战排行榜</h4>
+                <div id="leaderboard" class="space-y-2">
+                    <!-- JS动态生成 -->
+                </div>
+            </div>
+            <div class="my-4 bg-white/60 p-4 rounded-xl shadow">
+                <h4 class="text-xl font-bold text-center mb-2">家长好评</h4>
+                <div class="space-y-2">
+                    <p class="text-slate-600 text-sm italic text-center">“孩子在这里学跳绳后，不仅长高了，也更自信了！” - 学员家长 王女士</p>
+                    <p class="text-slate-600 text-sm italic text-center">“课程很有趣，孩子以前不爱运动，现在每周都盼着来上课！” - 学员家长 李先生</p>
+                </div>
+            </div>
+
+            <!-- 权威署名 -->
+            <div class="text-center text-xs text-slate-500 mt-auto pb-2">南宁市爱德华思跳绳 | AI智能运动算法生成 <br> <span id="busuanzi_container_site_pv">本活动已被浏览 <span id="busuanzi_value_site_pv"></span> 次</span></div>
+        </div>
+    </div>
+
+    <!-- 营销弹窗 - 领取体验课 -->
+    <div id="lead-form-modal" class="modal">
+        <div class="modal-content text-center">
+             <h3 class="text-2xl font-bold mb-4 text-green-500">锁定名额！</h3>
+             <p class="mb-4">请长按识别下方二维码</p>
+             <p class="mb-4 font-bold">添加 南宁市爱德华思跳绳 老师微信！</p>
+             <!-- MODIFIED: 恢复了二维码图片链接 -->
+             <img id="qr-code-img" src="https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.png" alt="微信二维码" class="w-48 h-48 mx-auto rounded-lg">
+             <button id="close-qrcode-modal-btn" class="mt-6 w-full py-3 bg-gray-500 text-white rounded-xl text-lg font-bold">关闭</button>
+        </div>
+    </div>
+
+    <!-- 营销弹窗 - 分享引导 -->
+    <div id="share-modal" class="modal">
+        <div class="modal-content text-center">
+            <h3 class="text-2xl font-bold mb-2 text-blue-500">分享赢大奖！</h3>
+            <!-- Prize Images -->
+            <p class="text-sm text-slate-500 mb-2">分享后参与抽奖，赢取以下好礼！</p>
+            <div class="flex justify-around items-center my-4">
+                <div class="text-center">
+                    <img src="https://pic1.imgdb.cn/item/68a0b6d558cb8da5c8289f7a.png" alt="专业跳绳" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/f87171/ffffff?text=跳绳';">
+                    <p class="text-xs mt-1 font-bold">专业跳绳</p>
+                </div>
+                <div class="text-center">
+                    <img src="https://pic1.imgdb.cn/item/68a0b6ce58cb8da5c8289f79.png" alt="限量礼盒" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/a78bfa/ffffff?text=礼盒';">
+                    <p class="text-xs mt-1 font-bold">限量礼盒</p>
+                </div>
+                <div class="text-center">
+                    <img src="https://pic1.imgdb.cn/item/68a0b6c258cb8da5c8289f78.png" alt="代金券" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/34d399/ffffff?text=代金券';">
+                    <p class="text-xs mt-1 font-bold">100元代金券</p>
+                </div>
+            </div>
+            <div class="my-4 p-2 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer" id="share-text-container">
+                <p class="text-left text-sm font-bold mb-1">分享文案 (点击复制)</p>
+                <p class="text-left text-sm text-slate-600" id="dynamic-share-text"></p>
+            </div>
+             <div class="my-4">
+                 <p class="text-left text-sm font-bold mb-1">分享步骤：</p>
+                 <p class="text-left text-sm text-slate-600">1. 点击上方文案完成复制。<br>2. 分享到朋友圈或微信群。<br>3. 邀请好友来挑战！</p>
+             </div>
+            <button id="share-now-btn" class="w-full py-3 bg-blue-500 text-white rounded-xl text-lg font-bold">立即分享，参与抽奖</button>
+            <button id="close-share-modal-btn" class="mt-4 text-gray-400 text-sm">暂不参与</button>
+        </div>
+    </div>
+    
+    <!-- 抽奖弹窗 -->
+    <div id="lottery-modal" class="modal">
+        <div class="modal-content flex flex-col items-center">
+            <h3 class="text-2xl font-bold mb-4 text-amber-500">幸运大转盘</h3>
+            <div id="lottery-container" class="relative flex justify-center items-center my-4">
+                <div id="lottery-wheel">
+                    <!-- JS动态生成奖品 -->
+                </div>
+                <button id="spin-btn">抽奖</button>
+            </div>
+            <!-- FIX: 调整布局，防止遮挡 -->
+            <p id="lottery-result" class="mt-4 mb-4 font-bold text-lg min-h-[1.75rem]"></p>
+            <button id="close-lottery-modal-btn" class="w-full py-2 bg-gray-500 text-white rounded-lg hidden">关闭</button>
+        </div>
+    </div>
+
+    <!-- 新增：不蒜子访问量统计脚本 -->
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+    <script>
+        // --- DOM元素获取 ---
+        const pages = document.querySelectorAll('.page');
+        const startBtn = document.getElementById('start-challenge-btn');
+        const choiceBtns = document.querySelectorAll('.user-choice-btn');
+        const challengeTitle = document.getElementById('challenge-title');
+        const challengeTimerBar = document.getElementById('challenge-timer-bar');
+        
+        const agilityContainer = document.getElementById('agility-challenge');
+        const enduranceContainer = document.getElementById('endurance-challenge');
+        const enduranceBtn = document.getElementById('endurance-btn');
+        const enduranceCount = document.getElementById('endurance-count');
+        const timingContainer = document.getElementById('timing-challenge');
+        const timingBtn = document.getElementById('timing-btn');
+        const timingBar = document.getElementById('timing-bar');
+        const timingFeedback = document.getElementById('timing-feedback');
+
+        const resultTitle = document.getElementById('result-title');
+        const resultDescription = document.getElementById('result-description');
+        const resultSuggestion = document.getElementById('result-suggestion');
+        const loadingText = document.getElementById('loading-text');
+        const spotsLeftEl = document.getElementById('spots-left');
+        const leaderboardContainer = document.getElementById('leaderboard');
+
+        const leadFormModal = document.getElementById('lead-form-modal');
+        const shareModal = document.getElementById('share-modal');
+        const openLeadFormBtn = document.getElementById('open-lead-form-btn');
+        const openShareModalBtn = document.getElementById('open-share-modal-btn');
+        const closeShareModalBtn = document.getElementById('close-share-modal-btn');
+        const closeQrcodeModalBtn = document.getElementById('close-qrcode-modal-btn');
+        const qrCodeImg = document.getElementById('qr-code-img');
+        const shareNowBtn = document.getElementById('share-now-btn');
+        const shareTextContainer = document.getElementById('share-text-container');
+        const dynamicShareText = document.getElementById('dynamic-share-text');
+        
+        const lotteryModal = document.getElementById('lottery-modal');
+        const lotteryWheel = document.getElementById('lottery-wheel');
+        const spinBtn = document.getElementById('spin-btn');
+        const lotteryResult = document.getElementById('lottery-result');
+        const closeLotteryModalBtn = document.getElementById('close-lottery-modal-btn');
+
+        // --- 游戏状态变量 ---
+        let userType = 'adult'; 
+        let scores = { agility: 0, endurance: 0, timing: 0 };
+        let totalScore = 0;
+        let currentChallengeIndex = 0;
+        const challenges = ['agility', 'endurance', 'timing'];
+        let timerInterval;
+        let synth; 
+        let isShareInstructed = false; 
+
+        // --- 初始化音效 ---
+        function initAudio() {
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            synth = new Tone.Synth().toDestination();
+        }
+
+        // --- 页面切换函数 ---
+        function showPage(pageId) {
+            pages.forEach(page => {
+                page.classList.toggle('active', page.id === pageId);
+            });
+        }
+        
+        // --- 弹窗控制 ---
+        function toggleModal(modal, show) {
+            modal.classList.toggle('active', show);
+        }
+
+        // --- 挑战流程控制 ---
+        function startNextChallenge() {
+            if (currentChallengeIndex < challenges.length) {
+                const challengeName = challenges[currentChallengeIndex];
+                switch (challengeName) {
+                    case 'agility': startAgilityChallenge(); break;
+                    case 'endurance': startEnduranceChallenge(); break;
+                    case 'timing': startTimingChallenge(); break;
+                }
+                currentChallengeIndex++;
+            } else {
+                showLoadingAndResults();
+            }
+        }
+
+        // --- 挑战1: 敏捷 ---
+        function startAgilityChallenge() {
+            challengeTitle.textContent = '挑战1: 敏捷反应';
+            agilityContainer.classList.remove('hidden');
+            enduranceContainer.classList.add('hidden');
+            timingContainer.classList.add('hidden');
+            
+            let duration = 10000;
+            let nextDot = 1;
+            let score = 0;
+            
+            function createDot() {
+                if (agilityContainer.children.length > 0) return; 
+                if (nextDot > 10) return;
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                dot.textContent = nextDot;
+                const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'];
+                dot.classList.add(colors[Math.floor(Math.random() * colors.length)]);
+                dot.style.top = `${Math.random() * 85 + 5}%`;
+                dot.style.left = `${Math.random() * 85 + 5}%`;
+                
+                dot.onclick = () => {
+                    synth.triggerAttackRelease("C5", "8n");
+                    score++;
+                    dot.remove();
+                    setTimeout(createDot, 100); 
+                };
+                
+                agilityContainer.appendChild(dot);
+                nextDot++;
+            }
+            
+            createDot();
+            runTimer(duration, () => {
+                scores.agility = score * 10;
+                agilityContainer.innerHTML = '';
+                startNextChallenge();
+            });
+        }
+
+        // --- 挑战2: 耐力 ---
+        function startEnduranceChallenge() {
+            challengeTitle.textContent = '挑战2: 耐力点击';
+            agilityContainer.classList.add('hidden');
+            enduranceContainer.classList.remove('hidden');
+            timingContainer.classList.add('hidden');
+
+            let duration = 10000;
+            let clicks = 0;
+            enduranceCount.textContent = '0';
+            
+            const clickHandler = () => {
+                clicks++;
+                enduranceCount.textContent = clicks;
+                synth.triggerAttackRelease("E4", "16n");
+                enduranceBtn.style.transform = `scale(${1 + clicks * 0.005})`;
+            };
+            enduranceBtn.addEventListener('click', clickHandler);
+            
+            runTimer(duration, () => {
+                enduranceBtn.removeEventListener('click', clickHandler);
+                scores.endurance = Math.min(100, clicks * (userType === 'child' ? 2.5 : 2));
+                enduranceBtn.style.transform = 'scale(1)';
+                startNextChallenge();
+            });
+        }
+
+        // --- 挑战3: 时机 ---
+        function startTimingChallenge() {
+            challengeTitle.textContent = '挑战3: 时机掌控';
+            agilityContainer.classList.add('hidden');
+            enduranceContainer.classList.add('hidden');
+            timingContainer.classList.remove('hidden');
+            
+            let attempts = 0;
+            let totalScore = 0;
+            const maxAttempts = 3;
+            timingFeedback.textContent = `第 ${attempts + 1} / ${maxAttempts} 次`;
+
+            function checkTiming() {
+                if (attempts >= maxAttempts) return;
+                
+                const barRect = timingBar.getBoundingClientRect();
+                const containerRect = timingBar.parentElement.getBoundingClientRect();
+                const barPosition = (barRect.left - containerRect.left) / containerRect.width * 100;
+                
+                let score = 0;
+                if (barPosition >= 40 && barPosition <= 60) {
+                    const distanceToCenter = Math.abs(barPosition - 50);
+                    score = Math.round(100 - distanceToCenter * 10);
+                    timingFeedback.textContent = `完美! +${score}`;
+                    synth.triggerAttackRelease("G5", "8n");
+                } else {
+                    timingFeedback.textContent = '失误!';
+                    synth.triggerAttackRelease("C3", "8n");
+                }
+                totalScore += score;
+                attempts++;
+                
+                if (attempts < maxAttempts) {
+                    setTimeout(() => {
+                        timingFeedback.textContent = `第 ${attempts + 1} / ${maxAttempts} 次`;
+                    }, 1000);
+                } else {
+                    timingBtn.removeEventListener('click', checkTiming);
+                    scores.timing = Math.round(totalScore / maxAttempts);
+                    setTimeout(startNextChallenge, 1500);
+                }
+            }
+            
+            timingBtn.addEventListener('click', checkTiming);
+        }
+
+        // --- 通用计时器 ---
+        function runTimer(duration, onComplete) {
+            clearInterval(timerInterval);
+            let startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsedTime = Date.now() - startTime;
+                const progress = 1 - (elapsedTime / duration);
+                challengeTimerBar.style.width = `${Math.max(0, progress * 100)}%`;
+                if (progress <= 0) {
+                    clearInterval(timerInterval);
+                    onComplete();
+                }
+            }, 50);
+        }
+        
+        // --- 显示加载并计算结果 ---
+        function showLoadingAndResults() {
+            showPage('loading-page');
+            let counter = 0;
+            const texts = ["正在分析你的运动细胞...", "匹配全球运动数据库...", "你的潜能报告即将生成!"];
+            const loadingInterval = setInterval(() => {
+                counter++;
+                if (counter <= 2) {
+                    loadingText.textContent = texts[counter];
+                } else {
+                    clearInterval(loadingInterval);
+                    generateResult();
+                    showPage('result-page');
+                }
+            }, 1200);
+        }
+
+        // --- 生成结果 ---
+        function generateResult() {
+            totalScore = Math.round((scores.agility + scores.endurance + scores.timing) / 3);
+            let title, description, suggestion;
+            let beatRatio = 75 + Math.floor(totalScore / 10); 
+
+            if (totalScore > 85) {
+                title = userType === 'child' ? "运动小超人" : "天赋异禀者";
+                description = `综合得分 ${totalScore}！你击败了全国 ${beatRatio}% 的挑战者！`;
+            } else if (totalScore > 60) {
+                title = userType === 'child' ? "活力小健将" : "运动潜力股";
+                description = `综合得分 ${totalScore}！你击败了全国 ${beatRatio}% 的挑战者！`;
+            } else {
+                title = userType === 'child' ? "成长小萌芽" : "潜力待发掘";
+                description = `综合得分 ${totalScore}！你的运动细胞正在沉睡，是时候唤醒它们了！`;
+            }
+
+            // 优化专业建议文案
+            if (userType === 'child') {
+                if (totalScore > 85) {
+                    suggestion = `孩子的天赋非常突出！我们的【跳绳体能课】能帮他优中更优，在花样跳绳和专业技巧上取得突破。课程既科学又有趣味，能充分激发孩子的运动热情！`;
+                } else if (totalScore > 60) {
+                    suggestion = `孩子很有潜力！在生长发育的黄金期，专业的指导能事半功倍。我们的【跳绳体能课】将科学训练与趣味游戏结合，能有效提升协调性、耐力，激发运动兴趣！`;
+                } else {
+                    suggestion = `每个孩子都是待发掘的宝藏！这个小测试只是一个开始。我们的【跳绳体能课】非常适合零基础的孩子，课程充满趣味性，能帮他建立自信，爱上运动，健康成长！`;
+                }
+            } else {
+                 if (totalScore > 60) {
+                    suggestion = `你的运动天赋很棒！保持运动是维持活力的最佳方式。我们的【儿童跳绳体能】课程体系非常科学，欢迎带孩子一起来体验运动的快乐，见证他的成长与蜕变！`;
+                } else {
+                    suggestion = `没关系，这只是个小游戏！重要的是开始运动的决心。我们的【儿童跳绳体能】课程非常有趣，能让孩子从小爱上运动，欢迎带他来体验，一起见证成长！`;
+                }
+            }
+            
+            resultTitle.textContent = title;
+            resultDescription.textContent = description;
+            resultSuggestion.textContent = suggestion;
+            dynamicShareText.textContent = generateShareText(title, totalScore, beatRatio);
+
+            drawResultChart();
+            updateLeaderboard();
+            
+            let spots = 7;
+            spotsLeftEl.textContent = spots;
+            setInterval(() => {
+                if (spots > 3) {
+                    spots--;
+                    spotsLeftEl.textContent = spots;
+                }
+            }, 5000);
+        }
+
+        function generateShareText(title, score, beatRatio) {
+             if (userType === 'child') {
+                return `刚给娃测了一下，AI算法算出他的运动天赋是“${title}”，击败了${beatRatio}%的同龄人！你也快来给孩子测测，看看他的隐藏潜力是什么！还能抽奖赢免费课！`;
+            } else {
+                return `我的反应力是王者级！拿到了${score}分，称号是“${title}”，不服来战！据说只有5%的人能拿到“运动小超人”称号，你敢挑战吗？`;
+            }
+        }
+
+        // --- 排行榜逻辑 (MODIFIED) ---
+        function updateLeaderboard() {
+            leaderboardContainer.innerHTML = ''; 
+            
+            const avatars = {
+                boy1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-blue-400 p-1"><path d="M50,1.5A48.5,48.5,0,1,0,98.5,50,48.55,48.55,0,0,0,50,1.5Zm0,90A41.5,41.5,0,1,1,91.5,50,41.55,41.55,0,0,1,50,91.5Z" fill="#fff"/><path d="M50,15.5a12,12,0,0,0-12,12v11a12,12,0,0,0,24,0v-11A12,12,0,0,0,50,15.5Z" fill="#e6a87e"/><path d="M50,22.5a5,5,0,0,0-5,5v3a5,5,0,0,0,10,0v-3A5,5,0,0,0,50,22.5Z" fill="#6a462f"/><path d="M35.5,58.5a1.5,1.5,0,0,0,1.5,1.5h26a1.5,1.5,0,0,0,0-3h-26A1.5,1.5,0,0,0,35.5,58.5Z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`,
+                girl1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-pink-400 p-1"><path d="M50,1.5A48.5,48.5,0,1,0,98.5,50,48.55,48.55,0,0,0,50,1.5Zm0,90A41.5,41.5,0,1,1,91.5,50,41.55,41.55,0,0,1,50,91.5Z" fill="#fff"/><path d="M50,15.5a12,12,0,0,0-12,12v11a12,12,0,0,0,24,0v-11A12,12,0,0,0,50,15.5Z" fill="#f2c8a7"/><path d="M62,18.5a6,6,0,1,0-12,0,1,1,0,0,0,2,0,4,4,0,1,1,8,0,1,1,0,0,0,2,0Z" fill="#c75b69"/><path d="M38,18.5a6,6,0,1,0-12,0,1,1,0,0,0,2,0,4,4,0,1,1,8,0,1,1,0,0,0,2,0Z" fill="#c75b69"/><path d="M50,22.5a5,5,0,0,0-5,5v3a5,5,0,0,0,10,0v-3A5,5,0,0,0,50,22.5Z" fill="#8c5a3c"/><path d="M35.5,60.5a1.5,1.5,0,0,0,1.5,1.5h26a1.5,1.5,0,0,0,0-3h-26A1.5,1.5,0,0,0,35.5,60.5Z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`,
+                boy2: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-green-400 p-1"><path d="M50,1.5A48.5,48.5,0,1,0,98.5,50,48.55,48.55,0,0,0,50,1.5Zm0,90A41.5,41.5,0,1,1,91.5,50,41.55,41.55,0,0,1,50,91.5Z" fill="#fff"/><path d="M50,15.5a12,12,0,0,0-12,12v11a12,12,0,0,0,24,0v-11A12,12,0,0,0,50,15.5Z" fill="#d4a17d"/><path d="M50,22.5a5,5,0,0,0-5,5v3a5,5,0,0,0,10,0v-3A5,5,0,0,0,50,22.5Z" fill="#4a3524"/><path d="M35.5,58.5a1.5,1.5,0,0,0,1.5,1.5h26a1.5,1.5,0,0,0,0-3h-26A1.5,1.5,0,0,0,35.5,58.5Z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`
+            };
+            
+            const thirdPlaceScore = Math.floor(Math.random() * (91 - 88 + 1)) + 88; // 88-91
+            const fourthPlaceScore = Math.floor(Math.random() * (thirdPlaceScore - 1 - 85 + 1)) + 85; // 85 to thirdPlaceScore-1
+
+            const fakePlayers = [
+                { name: '李*鑫', score: 96, avatar: 'boy1' },
+                { name: '马*梅', score: 92, avatar: 'girl1' },
+                { name: '王*', score: thirdPlaceScore, avatar: 'boy2' },
+                { name: '赵*', score: fourthPlaceScore, avatar: 'girl1' }
+            ];
+
+            const currentUser = { name: '我', score: totalScore, avatar: 'trophy' };
+
+            const renderPlayer = (player, rank) => {
+                const rankItem = document.createElement('div');
+                rankItem.className = `flex items-center p-2 rounded-lg ${player.name === '我' ? 'bg-orange-500/20' : 'bg-white/10'}`;
+                const avatarHtml = player.name === '我' 
+                    ? `<div class="w-8 h-8 rounded-full bg-amber-400 p-1 flex justify-center items-center">🏆</div>` 
+                    : avatars[player.avatar];
+                rankItem.innerHTML = `
+                    <span class="font-bold w-8">${rank}</span>
+                    <div class="w-10 h-10 flex items-center justify-center">${avatarHtml}</div>
+                    <span class="flex-grow font-semibold ml-2">${player.name}</span>
+                    <span class="font-bold text-orange-500">${player.score} 分</span>
+                `;
+                leaderboardContainer.appendChild(rankItem);
+            };
+
+            if (totalScore < 80) {
+                // User score is low, show top 3 and user at a lower rank
+                fakePlayers.slice(0, 3).forEach((player, index) => {
+                    renderPlayer(player, index + 1);
+                });
+
+                const ellipsis = document.createElement('div');
+                ellipsis.className = 'text-center text-gray-400 py-1';
+                ellipsis.textContent = '...';
+                leaderboardContainer.appendChild(ellipsis);
+
+                const randomRank = Math.floor(Math.random() * (15 - 8 + 1)) + 8; // Random rank between 8 and 15
+                renderPlayer(currentUser, randomRank);
+
+            } else {
+                // User score is high, show actual rank
+                const allPlayers = [...fakePlayers, currentUser].sort((a, b) => b.score - a.score);
+                allPlayers.forEach((player, index) => {
+                    renderPlayer(player, index + 1);
+                });
+            }
+        }
+
+        // --- 绘制雷达图 ---
+        let resultChartInstance;
+        function drawResultChart() {
+            const ctx = document.getElementById('result-chart').getContext('2d');
+            if (resultChartInstance) {
+                resultChartInstance.destroy();
+            }
+            Chart.defaults.color = '#475569'; // text-slate-600
+            Chart.defaults.font.family = "'Noto Sans SC', sans-serif";
+            resultChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['敏捷', '耐力', '时机', '协调', '力量'],
+                    datasets: [{
+                        label: '我的运动潜能',
+                        data: [
+                            scores.agility, 
+                            scores.endurance, 
+                            scores.timing,
+                            (scores.agility + scores.timing) / 2, 
+                            (scores.endurance + scores.timing) / 2.2
+                        ],
+                        backgroundColor: 'rgba(249, 115, 22, 0.2)',
+                        borderColor: 'rgba(249, 115, 22, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(249, 115, 22, 1)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: { color: '#334155', font: { size: 14 } },
+                            ticks: {
+                                color: '#64748b',
+                                backdropColor: 'transparent',
+                                stepSize: 25
+                            },
+                            min: 0,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#334155'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 抽奖逻辑 ---
+        // MODIFIED: 更新奖品名称和概率
+        const prizes = [
+            { text: '一个月免费课', prob: 2 }, 
+            { text: '幸运储备中', prob: 33 }, 
+            { text: '专业竞速跳绳', prob: 10 },
+            { text: '分享再抽一次', prob: 25 }, 
+            { text: '限量礼盒', prob: 10 }, 
+            { text: '100元代金券', prob: 20 }
+        ];
+        let isSpinning = false;
+        let spinCount = 0;
+        
+        function setupLotteryWheel() {
+            lotteryWheel.innerHTML = '';
+            prizes.forEach((prize, i) => {
+                const rotation = i * 60 + 30; // FIX: 旋转30度，使文字居中
+                const prizeElement = document.createElement('div');
+                prizeElement.className = 'prize';
+                prizeElement.style.transform = `rotate(${rotation}deg)`;
+                prizeElement.innerHTML = `<span class="prize-text">${prize.text}</span>`;
+                lotteryWheel.appendChild(prizeElement);
+            });
+        }
+
+        function spinWheel() {
+            if (isSpinning || spinCount >= 2) return;
+            
+            spinCount++;
+            localStorage.setItem('spinCount', spinCount);
+
+            isSpinning = true;
+            lotteryResult.textContent = '';
+            closeLotteryModalBtn.classList.add('hidden');
+            
+            // 权重抽奖算法
+            const totalProb = prizes.reduce((sum, p) => sum + p.prob, 0);
+            let random = Math.random() * totalProb;
+            let winningPrize;
+            let prizeIndex = 0;
+            for(const prize of prizes) {
+                random -= prize.prob;
+                if (random <= 0) {
+                    winningPrize = prize;
+                    break;
+                }
+                prizeIndex++;
+            }
+
+            const randomOffset = Math.random() * 40 - 20; // -20 to 20 degrees offset
+            const stopAngle = (prizeIndex * 60) + 30 + randomOffset;
+            const randomExtraTurns = Math.floor(Math.random() * 4) + 3; 
+            const totalRotation = randomExtraTurns * 360 + (360 - stopAngle);
+
+            lotteryWheel.style.transform = `rotate(${totalRotation}deg)`;
+
+            setTimeout(() => {
+                lotteryResult.textContent = `恭喜你抽中【${winningPrize.text}】!`;
+                
+                // MODIFIED: 中奖后增加分享提示
+                if (winningPrize.text !== '幸运储备中' && winningPrize.text !== '分享再抽一次') {
+                    lotteryResult.textContent += ' 晒图+@我们，送限量跳绳袋！';
+                     setTimeout(() => {
+                        alert('太棒了！快分享给朋友，让他们也来挑战赢奖品吧！');
+                    }, 500);
+                } else if (winningPrize.text === '分享再抽一次') {
+                    lotteryResult.textContent = '差一点！分享给好友可再抽一次！';
+                    isSpinning = false;
+                    // 重置按钮状态以允许第二次抽奖
+                    spinBtn.disabled = false;
+                    spinBtn.textContent = '再抽一次';
+                    spinBtn.classList.remove('bg-gray-500');
+                    return; 
+                }
+                
+                isSpinning = false;
+                closeLotteryModalBtn.classList.remove('hidden');
+                spinBtn.disabled = true;
+                spinBtn.textContent = '已抽';
+                spinBtn.classList.add('bg-gray-500');
+
+            }, 5000); 
+        }
+
+        // --- 事件监听 ---
+        startBtn.addEventListener('click', () => {
+            initAudio(); 
+            synth.triggerAttackRelease("C4", "8n");
+            showPage('choice-page');
+        });
+
+        choiceBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                synth.triggerAttackRelease("E4", "8n");
+                userType = btn.dataset.type;
+                showPage('challenge-page');
+                startNextChallenge();
+            });
+        });
+
+        openLeadFormBtn.addEventListener('click', () => {
+            toggleModal(leadFormModal, true)
+        });
+        
+        openShareModalBtn.addEventListener('click', () => {
+            if (isShareInstructed) {
+                toggleModal(lotteryModal, true);
+            } else {
+                toggleModal(shareModal, true);
+            }
+        });
+
+        closeShareModalBtn.addEventListener('click', () => toggleModal(shareModal, false));
+        closeQrcodeModalBtn.addEventListener('click', () => toggleModal(leadFormModal, false));
+        
+        shareNowBtn.addEventListener('click', () => {
+            alert('请点击右上角分享给好友或朋友圈！分享成功后，抽奖机会将自动激活！');
+            toggleModal(shareModal, false);
+            isShareInstructed = true;
+            openShareModalBtn.textContent = '开始抽奖';
+        });
+
+        shareTextContainer.addEventListener('click', () => {
+            const textToCopy = dynamicShareText.textContent;
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert('文案已复制！');
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        });
+
+        spinBtn.addEventListener('click', spinWheel);
+        closeLotteryModalBtn.addEventListener('click', () => toggleModal(lotteryModal, false));
+        
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            setupLotteryWheel();
+            // MODIFIED: 恢复了二维码图片链接
+            qrCodeImg.src = "https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.png"; 
+
+            spinCount = parseInt(localStorage.getItem('spinCount') || '0');
+            if (spinCount >= 2) {
+                spinBtn.disabled = true;
+                spinBtn.textContent = '已抽';
+                spinBtn.classList.add('bg-gray-500');
+            }
+        });
+
+    </script>
+</body>
+</html>
