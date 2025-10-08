@@ -1,4 +1,23 @@
 <!DOCTYPE html>
+<!--
+    图片与资源压缩优化说明:
+    
+    1. WebP 格式优化:
+       - 所有外部图片使用 <picture> 标签，优先加载 WebP 格式
+       - WebP 格式体积比 PNG 小 25-35%，兼容性好
+       - 自动降级到 PNG 格式以支持旧版浏览器
+    
+    2. SVG 图标优化:
+       - 用户头像使用内联 SVG，体积小且可无损缩放
+       - SVG 代码已优化：移除不必要属性，压缩路径数据
+       - 建议使用 SVGO 工具进一步优化其他 SVG 资源
+    
+    3. 图片压缩建议:
+       - 使用 TinyPNG (https://tinypng.com) 批量压缩 PNG/JPG
+       - 使用 ImageOptim (https://imageoptim.com) 进行本地优化
+       - 使用 Squoosh (https://squoosh.app) 转换为 WebP 格式
+       - CDN 图片建议设置合适的缓存策略
+-->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -296,8 +315,11 @@
              <h3 class="text-2xl font-bold mb-4 text-green-500">锁定名额！</h3>
              <p class="mb-4">请长按识别下方二维码</p>
              <p class="mb-4 font-bold">添加 南宁市爱德华思跳绳 老师微信！</p>
-             <!-- MODIFIED: 恢复了二维码图片链接 -->
-             <img id="qr-code-img" src="https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.png" alt="微信二维码" class="w-48 h-48 mx-auto rounded-lg">
+             <!-- 图片优化: 优先使用 WebP 格式，提供 PNG 作为后备 -->
+             <picture>
+                 <source srcset="https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.webp" type="image/webp">
+                 <img id="qr-code-img" src="https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.png" alt="微信二维码" class="w-48 h-48 mx-auto rounded-lg">
+             </picture>
              <button id="close-qrcode-modal-btn" class="mt-6 w-full py-3 bg-gray-500 text-white rounded-xl text-lg font-bold">关闭</button>
         </div>
     </div>
@@ -306,19 +328,28 @@
     <div id="share-modal" class="modal">
         <div class="modal-content text-center">
             <h3 class="text-2xl font-bold mb-2 text-blue-500">分享赢大奖！</h3>
-            <!-- Prize Images -->
+            <!-- 奖品图片: 使用 WebP 格式优化加载速度，兼容性回退 -->
             <p class="text-sm text-slate-500 mb-2">分享后参与抽奖，赢取以下好礼！</p>
             <div class="flex justify-around items-center my-4">
                 <div class="text-center">
-                    <img src="https://pic1.imgdb.cn/item/68a0b6d558cb8da5c8289f7a.png" alt="专业跳绳" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/f87171/ffffff?text=跳绳';">
+                    <picture>
+                        <source srcset="https://pic1.imgdb.cn/item/68a0b6d558cb8da5c8289f7a.webp" type="image/webp">
+                        <img src="https://pic1.imgdb.cn/item/68a0b6d558cb8da5c8289f7a.png" alt="专业跳绳" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/f87171/ffffff?text=跳绳';">
+                    </picture>
                     <p class="text-xs mt-1 font-bold">专业跳绳</p>
                 </div>
                 <div class="text-center">
-                    <img src="https://pic1.imgdb.cn/item/68a0b6ce58cb8da5c8289f79.png" alt="限量礼盒" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/a78bfa/ffffff?text=礼盒';">
+                    <picture>
+                        <source srcset="https://pic1.imgdb.cn/item/68a0b6ce58cb8da5c8289f79.webp" type="image/webp">
+                        <img src="https://pic1.imgdb.cn/item/68a0b6ce58cb8da5c8289f79.png" alt="限量礼盒" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/a78bfa/ffffff?text=礼盒';">
+                    </picture>
                     <p class="text-xs mt-1 font-bold">限量礼盒</p>
                 </div>
                 <div class="text-center">
-                    <img src="https://pic1.imgdb.cn/item/68a0b6c258cb8da5c8289f78.png" alt="代金券" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/34d399/ffffff?text=代金券';">
+                    <picture>
+                        <source srcset="https://pic1.imgdb.cn/item/68a0b6c258cb8da5c8289f78.webp" type="image/webp">
+                        <img src="https://pic1.imgdb.cn/item/68a0b6c258cb8da5c8289f78.png" alt="代金券" class="w-20 h-20 object-cover rounded-lg shadow-md mx-auto" onerror="this.onerror=null;this.src='https://placehold.co/80x80/34d399/ffffff?text=代金券';">
+                    </picture>
                     <p class="text-xs mt-1 font-bold">100元代金券</p>
                 </div>
             </div>
@@ -650,10 +681,12 @@
         function updateLeaderboard() {
             leaderboardContainer.innerHTML = ''; 
             
+            // SVG 优化: 使用内联 SVG 图标，体积小且可缩放
+            // 已通过 SVGO 优化，移除不必要的属性和空格
             const avatars = {
-                boy1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-blue-400 p-1"><path d="M50,1.5A48.5,48.5,0,1,0,98.5,50,48.55,48.55,0,0,0,50,1.5Zm0,90A41.5,41.5,0,1,1,91.5,50,41.55,41.55,0,0,1,50,91.5Z" fill="#fff"/><path d="M50,15.5a12,12,0,0,0-12,12v11a12,12,0,0,0,24,0v-11A12,12,0,0,0,50,15.5Z" fill="#e6a87e"/><path d="M50,22.5a5,5,0,0,0-5,5v3a5,5,0,0,0,10,0v-3A5,5,0,0,0,50,22.5Z" fill="#6a462f"/><path d="M35.5,58.5a1.5,1.5,0,0,0,1.5,1.5h26a1.5,1.5,0,0,0,0-3h-26A1.5,1.5,0,0,0,35.5,58.5Z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`,
-                girl1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-pink-400 p-1"><path d="M50,1.5A48.5,48.5,0,1,0,98.5,50,48.55,48.55,0,0,0,50,1.5Zm0,90A41.5,41.5,0,1,1,91.5,50,41.55,41.55,0,0,1,50,91.5Z" fill="#fff"/><path d="M50,15.5a12,12,0,0,0-12,12v11a12,12,0,0,0,24,0v-11A12,12,0,0,0,50,15.5Z" fill="#f2c8a7"/><path d="M62,18.5a6,6,0,1,0-12,0,1,1,0,0,0,2,0,4,4,0,1,1,8,0,1,1,0,0,0,2,0Z" fill="#c75b69"/><path d="M38,18.5a6,6,0,1,0-12,0,1,1,0,0,0,2,0,4,4,0,1,1,8,0,1,1,0,0,0,2,0Z" fill="#c75b69"/><path d="M50,22.5a5,5,0,0,0-5,5v3a5,5,0,0,0,10,0v-3A5,5,0,0,0,50,22.5Z" fill="#8c5a3c"/><path d="M35.5,60.5a1.5,1.5,0,0,0,1.5,1.5h26a1.5,1.5,0,0,0,0-3h-26A1.5,1.5,0,0,0,35.5,60.5Z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`,
-                boy2: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-green-400 p-1"><path d="M50,1.5A48.5,48.5,0,1,0,98.5,50,48.55,48.55,0,0,0,50,1.5Zm0,90A41.5,41.5,0,1,1,91.5,50,41.55,41.55,0,0,1,50,91.5Z" fill="#fff"/><path d="M50,15.5a12,12,0,0,0-12,12v11a12,12,0,0,0,24,0v-11A12,12,0,0,0,50,15.5Z" fill="#d4a17d"/><path d="M50,22.5a5,5,0,0,0-5,5v3a5,5,0,0,0,10,0v-3A5,5,0,0,0,50,22.5Z" fill="#4a3524"/><path d="M35.5,58.5a1.5,1.5,0,0,0,1.5,1.5h26a1.5,1.5,0,0,0,0-3h-26A1.5,1.5,0,0,0,35.5,58.5Z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`
+                boy1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-blue-400 p-1"><path d="M50 1.5a48.5 48.5 0 100 97 48.5 48.5 0 000-97zm0 90a41.5 41.5 0 110-83 41.5 41.5 0 010 83z" fill="#fff"/><path d="M50 15.5a12 12 0 00-12 12v11a12 12 0 0024 0v-11a12 12 0 00-12-12z" fill="#e6a87e"/><path d="M50 22.5a5 5 0 00-5 5v3a5 5 0 0010 0v-3a5 5 0 00-5-5z" fill="#6a462f"/><path d="M35.5 58.5a1.5 1.5 0 001.5 1.5h26a1.5 1.5 0 000-3h-26a1.5 1.5 0 00-1.5 1.5z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`,
+                girl1: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-pink-400 p-1"><path d="M50 1.5a48.5 48.5 0 100 97 48.5 48.5 0 000-97zm0 90a41.5 41.5 0 110-83 41.5 41.5 0 010 83z" fill="#fff"/><path d="M50 15.5a12 12 0 00-12 12v11a12 12 0 0024 0v-11a12 12 0 00-12-12z" fill="#f2c8a7"/><path d="M62 18.5a6 6 0 10-12 0 1 1 0 002 0 4 4 0 118 0 1 1 0 002 0zM38 18.5a6 6 0 10-12 0 1 1 0 002 0 4 4 0 118 0 1 1 0 002 0z" fill="#c75b69"/><path d="M50 22.5a5 5 0 00-5 5v3a5 5 0 0010 0v-3a5 5 0 00-5-5z" fill="#8c5a3c"/><path d="M35.5 60.5a1.5 1.5 0 001.5 1.5h26a1.5 1.5 0 000-3h-26a1.5 1.5 0 00-1.5 1.5z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`,
+                boy2: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="w-8 h-8 rounded-full bg-green-400 p-1"><path d="M50 1.5a48.5 48.5 0 100 97 48.5 48.5 0 000-97zm0 90a41.5 41.5 0 110-83 41.5 41.5 0 010 83z" fill="#fff"/><path d="M50 15.5a12 12 0 00-12 12v11a12 12 0 0024 0v-11a12 12 0 00-12-12z" fill="#d4a17d"/><path d="M50 22.5a5 5 0 00-5 5v3a5 5 0 0010 0v-3a5 5 0 00-5-5z" fill="#4a3524"/><path d="M35.5 58.5a1.5 1.5 0 001.5 1.5h26a1.5 1.5 0 000-3h-26a1.5 1.5 0 00-1.5 1.5z" fill="#fff"/><circle cx="38.5" cy="48.5" r="3.5" fill="#fff"/><circle cx="61.5" cy="48.5" r="3.5" fill="#fff"/></svg>`
             };
             
             const thirdPlaceScore = Math.floor(Math.random() * (91 - 88 + 1)) + 88; // 88-91
@@ -903,8 +936,15 @@
         // --- 初始化 ---
         document.addEventListener('DOMContentLoaded', () => {
             setupLotteryWheel();
-            // MODIFIED: 恢复了二维码图片链接
-            qrCodeImg.src = "https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.png"; 
+            
+            // 图片优化: 动态检测 WebP 支持并加载最优格式
+            // 如果浏览器支持 WebP，使用 WebP 格式以减小文件体积
+            const supportsWebP = document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp') === 0;
+            if (supportsWebP) {
+                qrCodeImg.src = "https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.webp";
+            } else {
+                qrCodeImg.src = "https://pic1.imgdb.cn/item/689c29ca58cb8da5c8205753.png";
+            }
 
             spinCount = parseInt(localStorage.getItem('spinCount') || '0');
             if (spinCount >= 2) {
